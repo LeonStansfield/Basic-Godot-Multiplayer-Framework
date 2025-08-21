@@ -37,11 +37,15 @@ text = "HOST"
 layout_mode = 2
 text = "JOIN"
 
-[node name="IPAddress" type="LineEdit" parent="Control"]
+[node name="IPInput" type="LineEdit" parent="Control"]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 placeholder_text = "IP ADDRESS"
+
+[node name="Exit" type="Button" parent="Control"]
+layout_mode = 2
+text = "Exit"
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_8gbba")
