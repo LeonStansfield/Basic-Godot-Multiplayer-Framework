@@ -39,8 +39,23 @@ func _on_connected():
 
 func _on_peer_connected(id):
 	print("Peer connected: %d" % id)
-	# When a new peer connects, tell EVERYONE to spawn them
-	spawn_player.rpc(id)
+	# Host sends the new peer a list of all existing players
+	if multiplayer.is_server():
+		_send_existing_players.rpc_id(id)
+		# Then tell everyone to spawn the new player
+		spawn_player.rpc(id)
+
+@rpc("authority")
+func _send_existing_players():
+	# This runs on the client that just connected
+	var players = []
+	for child in get_children():
+		if child is CharacterBody3D:
+			players.append(child.get_multiplayer_authority())
+	# Spawn all players we know about (host and others)
+	for peer_id in players:
+		if peer_id != multiplayer.get_unique_id():
+			spawn_player(peer_id)
 
 @rpc("any_peer")
 func spawn_player(peer_id):
