@@ -34,15 +34,23 @@ func join_game():
 
 func _on_connected():
 	print("Connected to server")
+	# When client connects, spawn their own player
+	spawn_player(multiplayer.get_unique_id())
 
 func _on_peer_connected(id):
-	if multiplayer.is_server():
-		spawn_player.rpc_id(id, id)
+	print("Peer connected: %d" % id)
+	# When a new peer connects, tell EVERYONE to spawn them
+	spawn_player.rpc(id)
 
 @rpc("any_peer")
 func spawn_player(peer_id):
+	# If player already exists, skip
+	for child in get_children():
+		if child is CharacterBody3D and child.get_multiplayer_authority() == peer_id:
+			return
 	var player = player_scene.instantiate()
 	# Randomize spawn position slightly
-	player.global_position = start_area.global_position + Vector3(randf()*5, 0, randf()*5)
+	player.global_position = start_area.global_position + Vector3(randf() * 5, 0, randf() * 5)
 	add_child(player)
 	player.set_multiplayer_authority(peer_id)
+	print("Spawned player for peer %d" % peer_id)
