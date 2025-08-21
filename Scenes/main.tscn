@@ -37,7 +37,7 @@ text = "HOST"
 layout_mode = 2
 text = "JOIN"
 
-[node name="IPInput" type="LineEdit" parent="Control"]
+[node name="IPAddress" type="LineEdit" parent="Control"]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4

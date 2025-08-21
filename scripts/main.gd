@@ -1,65 +1,151 @@
 extends Node
 
-@onready var host_button: Button = $Control/Host
-@onready var join_button: Button = $Control/Join
-@onready var exit_button: Button = $Control/Exit
-@onready var ip_input: LineEdit = $Control/IPInput
-@onready var player_scene: PackedScene = preload("res://Prefabs/player.tscn")
+@onready var ip_input = $Control/IPAddress
+@onready var host_button = $Control/Host
+@onready var join_button = $Control/Join
+@onready var exit_button = $Control/Exit
+@onready var start_area = $SpawnPoint
 
-var peer: ENetMultiplayerPeer
-var is_in_game: bool = false
+const PORT := 12345
+const MAX_PLAYERS := 4
+var player_scene := preload("res://Prefabs/player.tscn")
 
-func _ready() -> void:
-	join_button.disabled = true
-	exit_button.visible = false
-	ip_input.text_changed.connect(_on_ip_input_changed)
-	host_button.pressed.connect(_on_host_pressed)
-	join_button.pressed.connect(_on_join_pressed)
-	exit_button.pressed.connect(_on_exit_pressed)
+# Keep track of spawned players (peer_id -> node)
+var players: Dictionary = {}
 
-func _on_ip_input_changed(new_text: String) -> void:
-	join_button.disabled = new_text.strip_edges() == ""
+func _ready():
+	host_button.pressed.connect(host_game)
+	join_button.pressed.connect(join_game)
+	exit_button.pressed.connect(exit_game)
 
-func _on_host_pressed() -> void:
-	peer = ENetMultiplayerPeer.new()
-	peer.create_server(9000)
+	ip_input.text_changed.connect(_on_ip_text_changed)
+	update_join_button_state()
+
+	multiplayer.connected_to_server.connect(_on_connected_to_server)
+	multiplayer.connection_failed.connect(_on_connection_failed)
+	multiplayer.server_disconnected.connect(_on_server_disconnected)
+
+	multiplayer.peer_connected.connect(_on_peer_connected)       # Fires on server
+	multiplayer.peer_disconnected.connect(_on_peer_disconnected) # Fires on server
+
+func _on_ip_text_changed(new_text: String) -> void:
+	update_join_button_state()
+
+func update_join_button_state():
+	join_button.disabled = ip_input.text.strip_edges() == ""
+
+func host_game():
+	reset_game_state()
+	_show_game_ui(true)
+
+	var peer := ENetMultiplayerPeer.new()
+	peer.create_server(PORT, MAX_PLAYERS)
 	multiplayer.multiplayer_peer = peer
-	multiplayer.peer_connected.connect(_on_peer_connected)
-	_start_game()
+	print("Hosting on port %d" % PORT)
 
-func _on_join_pressed() -> void:
-	var ip: String = ip_input.text.strip_edges()
-	if ip == "":
+	# Host spawns itself locally
+	spawn_local(multiplayer.get_unique_id())
+
+func join_game():
+	if join_button.disabled:
 		return
-	peer = ENetMultiplayerPeer.new()
-	peer.create_client(ip, 9000)
+
+	reset_game_state()
+	_show_game_ui(true)
+
+	var ip: String = ip_input.text.strip_edges()
+	var peer := ENetMultiplayerPeer.new()
+	var err := peer.create_client(ip, PORT)
+	if err != OK:
+		print("Failed to create client peer")
+		_show_game_ui(false)
+		return
 	multiplayer.multiplayer_peer = peer
-	multiplayer.connected_to_server.connect(_start_game)
+	print("Connecting to %s..." % ip)
 
-func _on_exit_pressed() -> void:
+func exit_game():
+	if multiplayer.multiplayer_peer:
+		multiplayer.multiplayer_peer.close_connection()
+	reset_game_state()
+	_show_game_ui(false)
+
+func _on_connected_to_server():
+	print("Connected to server")
+	# Wait for server to spawn us; don't spawn early
+
+func _on_connection_failed():
+	print("Connection failed")
+	reset_game_state()
+	_show_game_ui(false)
+
+func _on_server_disconnected():
+	print("Disconnected from server")
+	reset_game_state()
+	_show_game_ui(false)
+
+func _show_game_ui(in_game: bool):
+	# Hide Host/Join when in game, show Exit button
+	host_button.visible = not in_game
+	join_button.visible = not in_game
+	ip_input.editable = not in_game
+	exit_button.visible = in_game
+
+func _on_peer_connected(id: int):
+	if !multiplayer.is_server():
+		return
+	print("Peer connected: %d" % id)
+	spawn_local(id)
+	spawn_remote.rpc_id(id, id)
+	for existing_id in players.keys():
+		if existing_id != id:
+			spawn_remote.rpc_id(id, existing_id)
+	for peer_id in multiplayer.get_peers():
+		if peer_id != id:
+			spawn_remote.rpc_id(peer_id, id)
+
+func _on_peer_disconnected(id: int):
+	if !multiplayer.is_server():
+		return
+	print("Peer disconnected: %d" % id)
+	for peer_id in multiplayer.get_peers():
+		despawn_remote.rpc_id(peer_id, id)
+	despawn_local(id)
+
+func spawn_local(peer_id: int):
+	if players.has(peer_id):
+		despawn_local(peer_id)
+	var p: CharacterBody3D = player_scene.instantiate() as CharacterBody3D
+	p.name = "Player_%s" % str(peer_id)
+	add_child(p)
+	p.set_multiplayer_authority(peer_id)
+	if is_instance_valid(start_area):
+		p.global_position = start_area.global_position + Vector3(randf() * 5.0, 0.0, randf() * 5.0)
+	if p.has_method("set_network_ready"):
+		p.call("set_network_ready", true)
+	players[peer_id] = p
+	print("Spawned local player node for peer %d" % peer_id)
+
+@rpc("authority")
+func spawn_remote(peer_id: int):
+	spawn_local(peer_id)
+
+@rpc("authority")
+func despawn_remote(peer_id: int):
+	despawn_local(peer_id)
+
+func despawn_local(peer_id: int):
+	if players.has(peer_id):
+		var n: Node = players[peer_id]
+		if is_instance_valid(n):
+			n.queue_free()
+		players.erase(peer_id)
+
+func reset_game_state():
+	for id in players.keys():
+		var n: Node = players[id]
+		if is_instance_valid(n):
+			n.queue_free()
+	players.clear()
 	multiplayer.multiplayer_peer = null
-	get_tree().reload_current_scene()
-
-func _start_game() -> void:
-	is_in_game = true
-	host_button.visible = false
-	join_button.visible = false
-	ip_input.visible = false
-	exit_button.visible = true
-
-	if multiplayer.is_server():
-		_spawn_player(multiplayer.get_unique_id())
-	else:
-		rpc_id(1, "_request_spawn", multiplayer.get_unique_id())
-
-func _on_peer_connected(id: int) -> void:
-	rpc_id(id, "_request_spawn", multiplayer.get_unique_id())
-
-@rpc("any_peer", "call_remote", "reliable")
-func _request_spawn(id: int) -> void:
-	_spawn_player(id)
-
-func _spawn_player(id: int) -> void:
-	var player = player_scene.instantiate()
-	player.name = str(id)
-	add_child(player)
+	print("Game state reset to initial state")
+	update_join_button_state()
