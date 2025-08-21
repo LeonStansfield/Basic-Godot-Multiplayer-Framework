@@ -1,15 +1,13 @@
 extends CharacterBody3D
 
 @export var speed: float = 5.0
-@onready var cam: Camera3D = get_node_or_null("Camera3D")
+var net_ready := false
 
-func _ready():
-	# Camera is optional; only enable on local authority
-	if cam:
-		cam.current = is_multiplayer_authority()
+func set_network_ready(v: bool) -> void:
+	net_ready = v
 
 func _physics_process(delta: float) -> void:
-	if is_multiplayer_authority():
+	if is_multiplayer_authority() and net_ready:
 		var dir := Vector3.ZERO
 		if Input.is_action_pressed("move_forward"): dir.z -= 1.0
 		if Input.is_action_pressed("move_back"):    dir.z += 1.0
@@ -26,6 +24,5 @@ func _physics_process(delta: float) -> void:
 
 @rpc("any_peer", "unreliable")
 func update_position(new_transform: Transform3D) -> void:
-	# Only remote proxies should apply incoming transforms
 	if !is_multiplayer_authority():
 		global_transform = new_transform
