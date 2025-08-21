@@ -17,7 +17,7 @@ func _ready() -> void:
 	join_button.pressed.connect(join_game)
 	exit_button.pressed.connect(exit_game)
 
-	ip_input.text_changed.connect(update_join_button_state)
+	ip_input.text_changed.connect(_on_ip_text_changed)
 	update_join_button_state()
 
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
@@ -26,8 +26,11 @@ func _ready() -> void:
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 
+func _on_ip_text_changed(new_text: String) -> void:
+	update_join_button_state()
+
 func update_join_button_state() -> void:
-	join_button.disabled = ip_input.text.strip_edges().is_empty()
+	join_button.disabled = ip_input.text.strip_edges() == ""
 
 func host_game() -> void:
 	reset_game_state()
