@@ -64,8 +64,7 @@ func join_game():
 	print("Connecting to %s..." % ip)
 
 func exit_game():
-	if multiplayer.multiplayer_peer:
-		multiplayer.multiplayer_peer.close_connection()
+	# Reset all multiplayer state; this automatically closes connections
 	reset_game_state()
 	_show_game_ui(false)
 
