@@ -121,7 +121,7 @@ func spawn_local(peer_id: int) -> void:
 	
 	if is_instance_valid(start_area):
 		var pos: Vector3 = start_area.global_position
-		p.global_position = pos + Vector3(randf_range(-5.0, 5.0), 0.0, randf_range(-5.0, 5.0))
+		p.global_position = pos + Vector3(randf_range(-3.0, 3.0), 0.0, randf_range(-5.0, 5.0))
 		
 	if p.has_method("set_network_ready"):
 		p.call("set_network_ready", true)
