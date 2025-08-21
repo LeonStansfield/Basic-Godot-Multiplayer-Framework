@@ -1,0 +1,62 @@
+[gd_scene load_steps=5 format=3 uid="uid://bu8gj3f1a56e2"]
+
+[ext_resource type="Script" uid="uid://c6uv4nke71tns" path="res://scripts/main.gd" id="1_jjgbg"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_jjgbg"]
+
+[sub_resource type="Sky" id="Sky_bo1nx"]
+sky_material = SubResource("ProceduralSkyMaterial_jjgbg")
+
+[sub_resource type="Environment" id="Environment_8gbba"]
+background_mode = 2
+sky = SubResource("Sky_bo1nx")
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_jjgbg")
+
+[node name="Control" type="VBoxContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -34.0
+offset_top = -50.5
+offset_right = 34.0
+offset_bottom = 50.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Host" type="Button" parent="Control"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+text = "HOST"
+
+[node name="Join" type="Button" parent="Control"]
+layout_mode = 2
+text = "JOIN"
+
+[node name="IPAddress" type="LineEdit" parent="Control"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+placeholder_text = "IP ADDRESS"
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_8gbba")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, 0.5, -0.5, 0, 0.707107, 0.707107, 0.707107, -0.5, 0.5, 0, 0, 0)
+shadow_enabled = true
+directional_shadow_blend_splits = true
+
+[node name="Ground" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+size = Vector3(10, 1, 10)
+
+[node name="SpawnPoint" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 6, 8)
