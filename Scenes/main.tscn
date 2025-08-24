@@ -1,6 +1,7 @@
-[gd_scene load_steps=5 format=3 uid="uid://bu8gj3f1a56e2"]
+[gd_scene load_steps=6 format=3 uid="uid://bu8gj3f1a56e2"]
 
-[ext_resource type="Script" uid="uid://c6uv4nke71tns" path="res://scripts/main.gd" id="1_jjgbg"]
+[ext_resource type="Script" uid="uid://dgooiq8i2pgt3" path="res://scripts/network_manager.gd" id="2_bo1nx"]
+[ext_resource type="Script" uid="uid://clujvy1w3io0r" path="res://scripts/ui.gd" id="3_8gbba"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_jjgbg"]
 
@@ -12,29 +13,44 @@ background_mode = 2
 sky = SubResource("Sky_bo1nx")
 
 [node name="Main" type="Node3D"]
-script = ExtResource("1_jjgbg")
 
-[node name="Control" type="VBoxContainer" parent="."]
+[node name="NetworkManager" type="Node" parent="."]
+script = ExtResource("2_bo1nx")
+spawn_root = NodePath("../SpawnRoot")
+
+[node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
 offset_left = 20.0
 offset_top = 20.0
 offset_right = 170.0
-offset_bottom = 156.0
+offset_bottom = 160.0
+script = ExtResource("3_8gbba")
+network_manager_path = NodePath("../NetworkManager")
 
-[node name="Host" type="Button" parent="Control"]
+[node name="VBoxContainer" type="VBoxContainer" parent="UI"]
+layout_mode = 2
+offset_top = 140.0
+offset_right = 150.0
+offset_bottom = 140.0
+
+[node name="Host" type="Button" parent="UI/VBoxContainer"]
 layout_mode = 2
 text = "HOST"
 
-[node name="Join" type="Button" parent="Control"]
+[node name="Join" type="Button" parent="UI/VBoxContainer"]
 layout_mode = 2
 text = "JOIN"
 
-[node name="IPAddress" type="LineEdit" parent="Control"]
+[node name="IPAddress" type="LineEdit" parent="UI/VBoxContainer"]
 layout_mode = 2
 placeholder_text = "IP ADDRESS"
 
-[node name="Exit" type="Button" parent="Control"]
+[node name="Exit" type="Button" parent="UI/VBoxContainer"]
 layout_mode = 2
 text = "Exit"
+
+[node name="SpawnRoot" type="Node3D" parent="."]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_8gbba")
