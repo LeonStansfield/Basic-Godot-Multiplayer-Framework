@@ -117,14 +117,15 @@ func _update_ui() -> void:
 		# Menu visible
 		host_button.visible = true
 		join_button.visible = true
-		exit_button.disabled = true
 
-		# While connecting: lock host/join/ip, but keep exit enabled
+		# While connecting
 		if _is_connecting:
 			host_button.disabled = true
 			join_button.disabled = true
 			ip_input.editable = false
+			exit_button.disabled = false
 		else:
 			host_button.disabled = false
 			join_button.disabled = ip_input.text.strip_edges() == ""
 			ip_input.editable = true
+			exit_button.disabled = true

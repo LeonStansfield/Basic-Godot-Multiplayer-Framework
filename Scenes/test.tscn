@@ -1,50 +1,42 @@
-[gd_scene load_steps=7 format=3 uid="uid://drfflkb1hn5uk"]
+[gd_scene load_steps=5 format=3 uid="uid://drfflkb1hn5uk"]
 
 [ext_resource type="PackedScene" uid="uid://da2cjrqbi7ywy" path="res://Prefabs/ball.tscn" id="1_8od7v"]
+[ext_resource type="Environment" uid="uid://crcpsuceqxwoc" path="res://Assets/environment.tres" id="1_qc4db"]
 [ext_resource type="PackedScene" uid="uid://d2qqevyfm5qko" path="res://Prefabs/player.tscn" id="2_qc4db"]
-
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ys1qc"]
-
-[sub_resource type="Sky" id="Sky_bo1nx"]
-sky_material = SubResource("ProceduralSkyMaterial_ys1qc")
-
-[sub_resource type="Environment" id="Environment_35xla"]
-background_mode = 2
-sky = SubResource("Sky_bo1nx")
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_i3aeo"]
 size = Vector3(25, 1, 25)
 
 [node name="Test" type="Node3D"]
 
-[node name="SpawnRoot" type="Node3D" parent="."]
-
-[node name="Ball" parent="SpawnRoot" instance=ExtResource("1_8od7v")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
-
-[node name="Player" parent="SpawnRoot" instance=ExtResource("2_qc4db")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 0)
-is_networked = false
-
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_35xla")
+environment = ExtResource("1_qc4db")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.707107, 0.5, -0.5, 0, 0.707107, 0.707107, 0.707107, -0.5, 0.5, 0, 0, 0)
 shadow_enabled = true
 directional_shadow_blend_splits = true
 
-[node name="SpawnPoint" type="Marker3D" parent="."]
+[node name="World" type="Node3D" parent="."]
 
-[node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 6, 8)
+[node name="SpawnRoot" type="Node3D" parent="World"]
 
-[node name="Ground" type="StaticBody3D" parent="."]
+[node name="Ball" parent="World/SpawnRoot" instance=ExtResource("1_8od7v")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+[node name="Player" parent="World/SpawnRoot" instance=ExtResource("2_qc4db")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 0)
+is_networked = false
+
+[node name="Ground" type="StaticBody3D" parent="World"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="World/Ground"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 shape = SubResource("BoxShape3D_i3aeo")
 
-[node name="CSGBox3D" type="CSGBox3D" parent="Ground"]
+[node name="CSGBox3D" type="CSGBox3D" parent="World/Ground"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 size = Vector3(25, 1, 25)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 6, 8)

@@ -1,16 +1,8 @@
-[gd_scene load_steps=7 format=3 uid="uid://bu8gj3f1a56e2"]
+[gd_scene load_steps=5 format=3 uid="uid://bu8gj3f1a56e2"]
 
 [ext_resource type="Script" uid="uid://dgooiq8i2pgt3" path="res://scripts/network_manager.gd" id="2_bo1nx"]
 [ext_resource type="Script" uid="uid://clujvy1w3io0r" path="res://scripts/ui.gd" id="3_8gbba"]
-
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_jjgbg"]
-
-[sub_resource type="Sky" id="Sky_bo1nx"]
-sky_material = SubResource("ProceduralSkyMaterial_jjgbg")
-
-[sub_resource type="Environment" id="Environment_8gbba"]
-background_mode = 2
-sky = SubResource("Sky_bo1nx")
+[ext_resource type="Environment" uid="uid://crcpsuceqxwoc" path="res://Assets/environment.tres" id="3_jjvhh"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_bo1nx"]
 size = Vector3(25, 1, 25)
@@ -19,7 +11,7 @@ size = Vector3(25, 1, 25)
 
 [node name="NetworkManager" type="Node" parent="."]
 script = ExtResource("2_bo1nx")
-spawn_root = NodePath("../SpawnRoot")
+spawn_root = NodePath("../World/SpawnRoot")
 
 [node name="UI" type="Control" parent="."]
 layout_mode = 3
@@ -33,9 +25,8 @@ network_manager_path = NodePath("../NetworkManager")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="UI"]
 layout_mode = 2
-offset_top = 140.0
 offset_right = 150.0
-offset_bottom = 140.0
+offset_bottom = 136.0
 
 [node name="Host" type="Button" parent="UI/VBoxContainer"]
 layout_mode = 2
@@ -53,27 +44,27 @@ placeholder_text = "IP ADDRESS"
 layout_mode = 2
 text = "Exit"
 
-[node name="SpawnRoot" type="Node3D" parent="."]
-
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_8gbba")
+environment = ExtResource("3_jjvhh")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.707107, 0.5, -0.5, 0, 0.707107, 0.707107, 0.707107, -0.5, 0.5, 0, 0, 0)
 shadow_enabled = true
 directional_shadow_blend_splits = true
 
-[node name="Ground" type="StaticBody3D" parent="."]
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 6, 8)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+[node name="World" type="Node3D" parent="."]
+
+[node name="SpawnRoot" type="Node3D" parent="World"]
+
+[node name="Ground" type="StaticBody3D" parent="World"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="World/Ground"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 shape = SubResource("BoxShape3D_bo1nx")
 
-[node name="CSGBox3D" type="CSGBox3D" parent="Ground"]
+[node name="CSGBox3D" type="CSGBox3D" parent="World/Ground"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 size = Vector3(25, 1, 25)
-
-[node name="SpawnPoint" type="Marker3D" parent="."]
-
-[node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 6, 8)
