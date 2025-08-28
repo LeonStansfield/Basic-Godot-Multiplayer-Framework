@@ -1,4 +1,6 @@
-[gd_scene load_steps=4 format=3 uid="uid://da2cjrqbi7ywy"]
+[gd_scene load_steps=5 format=3 uid="uid://da2cjrqbi7ywy"]
+
+[ext_resource type="Script" uid="uid://dd52auhfi0n7f" path="res://scripts/ball.gd" id="1_8a2hy"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_2kv05"]
 friction = 0.3
@@ -11,7 +13,10 @@ radial_segments = 16
 rings = 8
 
 [node name="Ball" type="RigidBody3D"]
+collision_layer = 4
+collision_mask = 7
 physics_material_override = SubResource("PhysicsMaterial_2kv05")
+script = ExtResource("1_8a2hy")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("SphereShape3D_2kv05")

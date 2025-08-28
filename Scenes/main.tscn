@@ -1,6 +1,5 @@
-[gd_scene load_steps=5 format=3 uid="uid://bu8gj3f1a56e2"]
+[gd_scene load_steps=4 format=3 uid="uid://bu8gj3f1a56e2"]
 
-[ext_resource type="Script" uid="uid://dgooiq8i2pgt3" path="res://scripts/network_manager.gd" id="2_bo1nx"]
 [ext_resource type="Script" uid="uid://clujvy1w3io0r" path="res://scripts/ui.gd" id="3_8gbba"]
 [ext_resource type="Environment" uid="uid://crcpsuceqxwoc" path="res://Assets/environment.tres" id="3_jjvhh"]
 
@@ -8,10 +7,6 @@
 size = Vector3(25, 1, 25)
 
 [node name="Main" type="Node3D"]
-
-[node name="NetworkManager" type="Node" parent="."]
-script = ExtResource("2_bo1nx")
-spawn_root = NodePath("../World/SpawnRoot")
 
 [node name="UI" type="Control" parent="."]
 layout_mode = 3
@@ -21,7 +16,6 @@ offset_top = 20.0
 offset_right = 170.0
 offset_bottom = 160.0
 script = ExtResource("3_8gbba")
-network_manager_path = NodePath("../NetworkManager")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="UI"]
 layout_mode = 2

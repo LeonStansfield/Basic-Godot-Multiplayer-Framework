@@ -7,8 +7,11 @@ radial_segments = 16
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_y6xdh"]
 
-[node name="Player" type="CharacterBody3D"]
+[node name="Player" type="CharacterBody3D" node_paths=PackedStringArray("ball_spawn_pos")]
+collision_layer = 2
+collision_mask = 3
 script = ExtResource("1_y6xdh")
+ball_spawn_pos = NodePath("BallSpawnPos")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
@@ -17,3 +20,6 @@ mesh = SubResource("CapsuleMesh_3icqa")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 shape = SubResource("CapsuleShape3D_y6xdh")
+
+[node name="BallSpawnPos" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0)

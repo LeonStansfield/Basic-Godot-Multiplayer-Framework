@@ -5,14 +5,10 @@ extends Control
 @onready var join_button: Button = $VBoxContainer/Join
 @onready var exit_button: Button = $VBoxContainer/Exit
 
-@export var network_manager_path: NodePath
-var nm: Node
-
 var _is_connecting := false
 var _in_game := false
 
 func _ready() -> void:
-	nm = get_node(network_manager_path)
 
 	# Buttons
 	host_button.pressed.connect(_on_host_pressed)
@@ -22,12 +18,12 @@ func _ready() -> void:
 	ip_input.text_changed.connect(_on_ip_text_changed)
 
 	# NetworkManager signals
-	nm.connect("hosting_started", Callable(self, "_on_hosting_started"))
-	nm.connect("hosting_failed", Callable(self, "_on_hosting_failed"))
-	nm.connect("connecting_started", Callable(self, "_on_connecting_started"))
-	nm.connect("connected", Callable(self, "_on_connected"))
-	nm.connect("connection_failed", Callable(self, "_on_connection_failed"))
-	nm.connect("disconnected", Callable(self, "_on_disconnected"))
+	NetworkManager.connect("hosting_started", Callable(self, "_on_hosting_started"))
+	NetworkManager.connect("hosting_failed", Callable(self, "_on_hosting_failed"))
+	NetworkManager.connect("connecting_started", Callable(self, "_on_connecting_started"))
+	NetworkManager.connect("connected", Callable(self, "_on_connected"))
+	NetworkManager.connect("connection_failed", Callable(self, "_on_connection_failed"))
+	NetworkManager.connect("disconnected", Callable(self, "_on_disconnected"))
 
 	_update_ui()
 
@@ -35,7 +31,7 @@ func _ready() -> void:
 # BUTTON HANDLERS
 # ======================
 func _on_host_pressed() -> void:
-	var err: Error = nm.host_game()
+	var err: Error = NetworkManager.host_game()
 	if err != OK:
 		# Stay in menu; nothing else to do. (hosting_failed signal also fires)
 		return
@@ -43,7 +39,7 @@ func _on_host_pressed() -> void:
 func _on_join_pressed() -> void:
 	var ip := ip_input.text.strip_edges()
 	# Try to start connecting. If invalid IP or immediate error, do nothing visible.
-	var err: Error = nm.join_game(ip)
+	var err: Error = NetworkManager.join_game(ip)
 	if err != OK:
 		_is_connecting = false
 		_in_game = false
@@ -53,7 +49,7 @@ func _on_join_pressed() -> void:
 
 func _on_exit_pressed() -> void:
 	# Works both while in-game and while connecting (acts as cancel).
-	nm.exit_game()
+	NetworkManager.exit_game()
 	# UI is updated via "disconnected" signal, but keep it responsive now too.
 	_is_connecting = false
 	_in_game = false

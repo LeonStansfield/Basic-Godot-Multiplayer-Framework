@@ -7,8 +7,6 @@ signal connected
 signal connection_failed
 signal disconnected
 
-@export var spawn_root: NodePath   # Assign to a Node3D in editor (e.g., "SpawnRoot")
-
 const PORT: int = 12345
 const MAX_PLAYERS: int = 4
 
@@ -23,10 +21,12 @@ var spawnable_scenes: Dictionary = {  # Register types here
 # Tracks all spawned objects: { object_id: { "type": String, "node": Node } }
 var networked_objects: Dictionary = {}
 
-var _spawn_root_node: Node
+var spawn_root: Node3D
 
 func _ready() -> void:
-	_spawn_root_node = get_node(spawn_root)
+	spawn_root = Node3D.new()
+	spawn_root.name = "SpawnRoot"
+	add_child(spawn_root)
 
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
@@ -51,8 +51,7 @@ func host_game() -> Error:
 	print("Hosting server on port %d" % PORT)
 	emit_signal("hosting_started")
 
-	# Host spawns themselves immediately as a player
-	spawn_networked_object("player", str(multiplayer.get_unique_id()), multiplayer.get_unique_id())
+	spawn_networked_object("player", str(multiplayer.get_unique_id()), multiplayer.get_unique_id(), Vector3.ZERO, false)
 	return OK
 
 func join_game(ip: String) -> Error:
@@ -106,10 +105,11 @@ func _on_peer_connected(id: int) -> void:
 	print("Peer connected: %d" % id)
 
 	if multiplayer.is_server():
-		var spawn_pos = _spawn_root_node.global_position + Vector3(randf_range(-3.0, 3.0), 0.0, randf_range(-3.0, 3.0))
-		spawn_networked_object("player", str(id), id, spawn_pos)
+		var spawn_pos = spawn_root.global_position + Vector3(randf_range(-3.0, 3.0), 0.0, randf_range(-3.0, 3.0))
+		# Spawn server-side but don't announce here (we will explicitly tell peers below)
+		spawn_networked_object("player", str(id), id, spawn_pos, false)
 
-		# Tell the new peer about all existing objects
+		# 1) Tell the new peer about ALL existing objects (including this new player's object)
 		for object_id in networked_objects.keys():
 			var rec = networked_objects[object_id]
 			var node: Node = rec.node
@@ -118,7 +118,7 @@ func _on_peer_connected(id: int) -> void:
 			var pos: Vector3 = node.global_position if node is Node3D else Vector3.ZERO
 			rpc_id(id, "spawn_remote_object", obj_type, object_id, auth, pos)
 
-		# Tell all existing peers about the new player's object
+		# 2) Tell all existing peers about the new player's object (avoid sending to the newly-connected peer)
 		for peer_id in multiplayer.get_peers():
 			if peer_id != id:
 				rpc_id(peer_id, "spawn_remote_object", "player", str(id), id, spawn_pos)
@@ -133,7 +133,7 @@ func _on_peer_disconnected(id: int) -> void:
 # ======================
 # GENERIC NETWORKED OBJECT MANAGEMENT
 # ======================
-func spawn_networked_object(object_type: String, object_id: String, authority: int = 1, position: Vector3 = Vector3.ZERO) -> void:
+func spawn_networked_object(object_type: String, object_id: String, authority: int = 1, position: Vector3 = Vector3.ZERO, announce: bool = true) -> void:
 	if not spawnable_scenes.has(object_type):
 		printerr("Unknown object type: %s" % object_type)
 		return
@@ -144,7 +144,7 @@ func spawn_networked_object(object_type: String, object_id: String, authority: i
 	var scene: PackedScene = spawnable_scenes[object_type]
 	var node: Node = scene.instantiate()
 	node.name = "%s_%s" % [object_type.capitalize(), object_id]
-	_spawn_root_node.add_child(node)
+	spawn_root.add_child(node)
 
 	node.set_multiplayer_authority(authority)
 
@@ -153,7 +153,25 @@ func spawn_networked_object(object_type: String, object_id: String, authority: i
 			node.global_position = position
 		elif multiplayer.is_server():
 			var random_offset = Vector3(randf_range(-3.0, 3.0), 0.0, randf_range(-3.0, 3.0))
-			node.global_position = _spawn_root_node.global_position + random_offset
+			node.global_position = spawn_root.global_position + random_offset
+
+	if node.has_method("set_network_ready"):
+		node.call("set_network_ready", true)
+
+	networked_objects[object_id] = { "type": object_type, "node": node }
+	print("Spawned %s with ID %s (authority: %d) at %s" % [object_type, object_id, authority, node.global_position])
+
+	# If this is a server-side runtime spawn, tell connected peers to also create the object
+	if multiplayer.is_server() and announce:
+		for peer_id in multiplayer.get_peers():
+			rpc_id(peer_id, "spawn_remote_object", object_type, object_id, authority, node.global_position)
+
+	if node is Node3D:
+		if position != Vector3.ZERO:
+			node.global_position = position
+		elif multiplayer.is_server():
+			var random_offset = Vector3(randf_range(-3.0, 3.0), 0.0, randf_range(-3.0, 3.0))
+			node.global_position = spawn_root.global_position + random_offset
 
 	if node.has_method("set_network_ready"):
 		node.call("set_network_ready", true)
