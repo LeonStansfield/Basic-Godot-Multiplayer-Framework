@@ -7,21 +7,6 @@ radial_segments = 16
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_y6xdh"]
 
-[sub_resource type="Animation" id="Animation_y6xdh"]
-resource_name = "animation_1"
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("MeshInstance3D:rotation")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0, 0.5, 1),
-"transitions": PackedFloat32Array(1, 1, 1),
-"update": 0,
-"values": [Vector3(0, 0, 0), Vector3(3.14159, 0, 0), Vector3(6.28319, 0, 0)]
-}
-
 [sub_resource type="Animation" id="Animation_5wxv7"]
 length = 0.001
 tracks/0/type = "value"
@@ -49,6 +34,21 @@ tracks/1/keys = {
 "values": [Vector3(1, 1, 1)]
 }
 
+[sub_resource type="Animation" id="Animation_y6xdh"]
+resource_name = "animation_1"
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MeshInstance3D:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.5, 1),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(3.14159, 0, 0), Vector3(6.28319, 0, 0)]
+}
+
 [sub_resource type="Animation" id="Animation_y5hcb"]
 resource_name = "animation_2"
 tracks/0/type = "value"
@@ -71,12 +71,22 @@ _data = {
 &"animation_2": SubResource("Animation_y5hcb")
 }
 
-[node name="Player" type="CharacterBody3D" node_paths=PackedStringArray("ball_spawn_pos", "animation_player")]
+[node name="Player" type="CharacterBody3D" node_paths=PackedStringArray("camera_rig", "camera", "ball_spawn_pos", "animation_player")]
 collision_layer = 2
 collision_mask = 3
 script = ExtResource("1_y6xdh")
-ball_spawn_pos = NodePath("BallSpawnPos")
+camera_rig = NodePath("CameraRig")
+camera = NodePath("CameraRig/Camera3D")
+ball_spawn_pos = NodePath("CameraRig/Camera3D/BallSpawnPos")
 animation_player = NodePath("AnimationPlayer")
+
+[node name="CameraRig" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+
+[node name="BallSpawnPos" type="Marker3D" parent="CameraRig/Camera3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, -1)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
@@ -85,9 +95,6 @@ mesh = SubResource("CapsuleMesh_3icqa")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 shape = SubResource("CapsuleShape3D_y6xdh")
-
-[node name="BallSpawnPos" type="Marker3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0)
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {

@@ -47,7 +47,12 @@ func host_game() -> Error:
 	print("Hosting server on port %d" % PORT)
 	emit_signal("hosting_started")
 
-	spawn_networked_object("player", str(multiplayer.get_unique_id()), multiplayer.get_unique_id(), Vector3.ZERO, false)
+	# Spawn the host's player object. We'll give them a small offset to start with.
+	var rng = RandomNumberGenerator.new()
+	rng.randomize()
+	var spawn_offset = Vector3(rng.randf_range(-3, 3), 0, rng.randf_range(-3, 3))
+	var host_spawn_pos = spawn_root.global_position + spawn_offset
+	spawn_networked_object("player", str(multiplayer.get_unique_id()), multiplayer.get_unique_id(), host_spawn_pos, Vector3.ZERO, Vector3.ONE, false)
 	return OK
 
 func join_game(ip: String) -> Error:
@@ -97,9 +102,12 @@ func _on_peer_connected(id: int) -> void:
 	print("Peer connected: %d" % id)
 
 	if multiplayer.is_server():
-		var spawn_pos = spawn_root.global_position + Vector3(randf_range(-3.0, 3.0), 0.0, randf_range(-3.0, 3.0))
+		var rng = RandomNumberGenerator.new()
+		rng.randomize()
+		var spawn_offset = Vector3(rng.randf_range(-3, 3), 0, rng.randf_range(-3, 3))
+		var spawn_pos = spawn_root.global_position + spawn_offset
 		# Spawn server-side but don't announce here (we will explicitly tell peers below)
-		spawn_networked_object("player", str(id), id, spawn_pos, false)
+		spawn_networked_object("player", str(id), id, spawn_pos, Vector3.ZERO, Vector3.ONE, false)
 
 		# 1) Tell the new peer about ALL existing objects (including this new player's object)
 		for object_id in networked_objects.keys():
@@ -108,12 +116,12 @@ func _on_peer_connected(id: int) -> void:
 			var obj_type: String = rec.type
 			var auth: int = node.get_multiplayer_authority()
 			var pos: Vector3 = node.global_position if node is Node3D else Vector3.ZERO
-			rpc_id(id, "spawn_remote_object", obj_type, object_id, auth, pos)
+			rpc_id(id, "spawn_remote_object", obj_type, object_id, auth, pos, Vector3.ZERO, Vector3.ONE)
 
 		# 2) Tell all existing peers about the new player's object (avoid sending to the newly-connected peer)
 		for peer_id in multiplayer.get_peers():
 			if peer_id != id:
-				rpc_id(peer_id, "spawn_remote_object", "player", str(id), id, spawn_pos)
+				rpc_id(peer_id, "spawn_remote_object", "player", str(id), id, spawn_pos, Vector3.ZERO, Vector3.ONE)
 
 func _on_peer_disconnected(id: int) -> void:
 	print("Peer disconnected: %d" % id)
@@ -123,62 +131,57 @@ func _on_peer_disconnected(id: int) -> void:
 		rpc("despawn_remote_object", str(id))
 
 # GENERIC NETWORKED OBJECT MANAGEMENT
-func spawn_networked_object(object_type: String, object_id: String, authority: int = 1, position: Vector3 = Vector3.ZERO, announce: bool = true) -> void:
+func spawn_networked_object(object_type: String, object_id: String, authority: int = 1, position: Vector3 = Vector3.ZERO, rotation: Vector3 = Vector3.ZERO, scale: Vector3 = Vector3.ONE, announce: bool = true) -> void:
+	# Check if the object type is valid
 	if not spawnable_scenes.has(object_type):
 		printerr("Unknown object type: %s" % object_type)
 		return
 
-	if networked_objects.has(object_id):
+	if networked_objects.has(object_id): # If the object already exists, despawn it before spawning a new one
 		despawn_networked_object(object_id)
 
+	# Create the new object
 	var scene: PackedScene = spawnable_scenes[object_type]
 	var node: Node = scene.instantiate()
 	node.name = "%s_%s" % [object_type.capitalize(), object_id]
 	spawn_root.add_child(node)
+	
+	# Set transforms
+	if node is Node3D:
+		node.global_position = position
+		node.rotation_degrees = rotation
+		node.scale = scale
+
+	# Set ID
+	if node.networked_object_id != null:
+		node.networked_object_id = object_id
 
 	node.set_multiplayer_authority(authority)
 
-	if node is Node3D:
-		if position != Vector3.ZERO:
-			node.global_position = position
-		elif multiplayer.is_server():
-			var random_offset = Vector3(randf_range(-3.0, 3.0), 0.0, randf_range(-3.0, 3.0))
-			node.global_position = spawn_root.global_position + random_offset
-
-	if node.has_method("set_network_ready"):
-		node.call("set_network_ready", true)
+	# Call network_ready now objects are initialised
+	if node.has_method("network_ready"):
+		node.call("network_ready")
 
 	networked_objects[object_id] = { "type": object_type, "node": node }
-	print("Spawned %s with ID %s (authority: %d) at %s" % [object_type, object_id, authority, node.global_position])
+	print("Spawned %s with ID %s (authority: %d) at position: %s rotation: %s scale: %s " % [object_type, object_id, authority, node.global_position, node.rotation_degrees, node.scale])
 
-	# If this is a server-side runtime spawn, tell connected peers to also create the object
+	# Announce the new object to all peers
 	if multiplayer.is_server() and announce:
 		for peer_id in multiplayer.get_peers():
-			rpc_id(peer_id, "spawn_remote_object", object_type, object_id, authority, node.global_position)
-
-	if node is Node3D:
-		if position != Vector3.ZERO:
-			node.global_position = position
-		elif multiplayer.is_server():
-			var random_offset = Vector3(randf_range(-3.0, 3.0), 0.0, randf_range(-3.0, 3.0))
-			node.global_position = spawn_root.global_position + random_offset
-
-	if node.has_method("set_network_ready"):
-		node.call("set_network_ready", true)
-
-	networked_objects[object_id] = { "type": object_type, "node": node }
-	print("Spawned %s with ID %s (authority: %d) at %s" % [object_type, object_id, authority, node.global_position])
+			rpc_id(peer_id, "spawn_remote_object", object_type, object_id, authority, node.global_position, node.rotation_degrees, node.scale)
 
 @rpc("any_peer", "reliable")
-func spawn_remote_object(object_type: String, object_id: String, authority: int, position: Vector3) -> void:
-	spawn_networked_object(object_type, object_id, authority, position)
+func spawn_remote_object(object_type: String, object_id: String, authority: int, position: Vector3, rotation: Vector3, scale: Vector3) -> void:
+	spawn_networked_object(object_type, object_id, authority, position, rotation, scale)
 
 func despawn_networked_object(object_id: String) -> void:
 	if networked_objects.has(object_id):
 		var node: Node = networked_objects[object_id].node
-		if is_instance_valid(node):
-			node.queue_free()
-		networked_objects.erase(object_id)
+		if node.has_method("_set_network_ready"):
+			node.call("_set_network_ready", false)
+		networked_objects.erase(object_id)  # Remove reference first
+		if is_instance_valid(node) and is_instance_valid(node):
+			node.call_deferred("queue_free") # Call queue free on the next frame
 
 @rpc("any_peer", "reliable")
 func despawn_remote_object(object_id: String) -> void:
@@ -186,12 +189,22 @@ func despawn_remote_object(object_id: String) -> void:
 
 # RESET/CLEANUP
 func reset_game_state() -> void:
-	for id in networked_objects.keys():
-		var node: Node = networked_objects[id].node
-		if is_instance_valid(node):
-			node.queue_free()
+	print("Resetting game state...")
+	
+	# Make a copy of keys
+	var object_ids = networked_objects.keys()
+	for id in object_ids:
+		var rec = networked_objects.get(id, null)
+		if rec != null:
+			var node: Node = rec.node
+			if is_instance_valid(node) and is_instance_valid(node):
+				if node.has_method("_set_network_ready"):
+					node.call("_set_network_ready", false)
+				# Use deferred call to delete on the next frame
+				node.call_deferred("queue_free")
+	
+	# Clear after freeing requests have been queued
 	networked_objects.clear()
-	print("Game state reset")
 
 func _close_peer() -> void:
 	if multiplayer.multiplayer_peer != null:
