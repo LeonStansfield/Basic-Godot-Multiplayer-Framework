@@ -27,13 +27,11 @@ func _ready() -> void:
 
 	_update_ui()
 
-# ======================
 # BUTTON HANDLERS
-# ======================
 func _on_host_pressed() -> void:
 	var err: Error = NetworkManager.host_game()
 	if err != OK:
-		# Stay in menu; nothing else to do. (hosting_failed signal also fires)
+		# Stay in menu
 		return
 
 func _on_join_pressed() -> void:
@@ -45,12 +43,9 @@ func _on_join_pressed() -> void:
 		_in_game = false
 		_update_ui()
 		return
-	# If OK, we will get "connecting_started" soon. Until then, keep the menu as-is.
 
 func _on_exit_pressed() -> void:
-	# Works both while in-game and while connecting (acts as cancel).
 	NetworkManager.exit_game()
-	# UI is updated via "disconnected" signal, but keep it responsive now too.
 	_is_connecting = false
 	_in_game = false
 	_update_ui()
@@ -58,9 +53,7 @@ func _on_exit_pressed() -> void:
 func _on_ip_text_changed(_new_text: String) -> void:
 	_update_ui()
 
-# ======================
 # NETWORK SIGNAL HANDLERS
-# ======================
 func _on_hosting_started() -> void:
 	_in_game = true
 	_is_connecting = false
@@ -93,9 +86,7 @@ func _on_disconnected() -> void:
 	_in_game = false
 	_update_ui()
 
-# ======================
 # UI STATE
-# ======================
 func _update_ui() -> void:
 	# Exit is always available and enabled
 	exit_button.visible = true

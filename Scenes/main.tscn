@@ -32,6 +32,7 @@ text = "JOIN"
 
 [node name="IPAddress" type="LineEdit" parent="UI/VBoxContainer"]
 layout_mode = 2
+text = "127.0.0.1"
 placeholder_text = "IP ADDRESS"
 
 [node name="Exit" type="Button" parent="UI/VBoxContainer"]

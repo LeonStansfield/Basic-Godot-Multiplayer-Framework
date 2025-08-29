@@ -20,3 +20,7 @@ func sync_state(t: Transform3D, lin_vel: Vector3, ang_vel: Vector3):
 		global_transform = t
 		linear_velocity = lin_vel
 		angular_velocity = ang_vel
+
+
+func _on_despawn_timer_timeout():
+	queue_free()

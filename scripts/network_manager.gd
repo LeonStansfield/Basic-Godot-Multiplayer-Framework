@@ -7,12 +7,10 @@ signal connected
 signal connection_failed
 signal disconnected
 
-const PORT: int = 12345
-const MAX_PLAYERS: int = 4
+const PORT: int = 8080
+const MAX_PLAYERS: int = 16
 
-# ===========================
 # Registry for spawnable objects
-# ===========================
 var spawnable_scenes: Dictionary = {  # Register types here
 	"player": preload("res://Prefabs/player.tscn"),
 	"ball": preload("res://Prefabs/ball.tscn")
@@ -34,9 +32,7 @@ func _ready() -> void:
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 
-# ======================
 # SERVER / CLIENT SETUP
-# ======================
 func host_game() -> Error:
 	reset_game_state()
 
@@ -79,9 +75,7 @@ func exit_game() -> void:
 	reset_game_state()
 	emit_signal("disconnected")
 
-# ======================
 # CONNECTION EVENTS
-# ======================
 func _on_connected_to_server() -> void:
 	print("Connected to server")
 	emit_signal("connected")
@@ -98,9 +92,7 @@ func _on_server_disconnected() -> void:
 	reset_game_state()
 	emit_signal("disconnected")
 
-# ======================
 # PEER EVENTS (server-side spawning)
-# ======================
 func _on_peer_connected(id: int) -> void:
 	print("Peer connected: %d" % id)
 
@@ -130,9 +122,7 @@ func _on_peer_disconnected(id: int) -> void:
 		despawn_networked_object(str(id))
 		rpc("despawn_remote_object", str(id))
 
-# ======================
 # GENERIC NETWORKED OBJECT MANAGEMENT
-# ======================
 func spawn_networked_object(object_type: String, object_id: String, authority: int = 1, position: Vector3 = Vector3.ZERO, announce: bool = true) -> void:
 	if not spawnable_scenes.has(object_type):
 		printerr("Unknown object type: %s" % object_type)
@@ -190,14 +180,11 @@ func despawn_networked_object(object_id: String) -> void:
 			node.queue_free()
 		networked_objects.erase(object_id)
 
-
 @rpc("any_peer", "reliable")
 func despawn_remote_object(object_id: String) -> void:
 	despawn_networked_object(object_id)
 
-# ======================
 # RESET/CLEANUP
-# ======================
 func reset_game_state() -> void:
 	for id in networked_objects.keys():
 		var node: Node = networked_objects[id].node
