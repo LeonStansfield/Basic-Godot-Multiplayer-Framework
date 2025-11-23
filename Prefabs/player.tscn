@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://d2qqevyfm5qko"]
+[gd_scene load_steps=9 format=3 uid="uid://d2qqevyfm5qko"]
 
 [ext_resource type="Script" uid="uid://bid58dflx8d23" path="res://scripts/player.gd" id="1_y6xdh"]
 
@@ -71,6 +71,14 @@ _data = {
 &"animation_2": SubResource("Animation_y5hcb")
 }
 
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_player"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:rotation")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+
 [node name="Player" type="CharacterBody3D" node_paths=PackedStringArray("camera_rig", "camera", "ball_spawn_pos", "animation_player")]
 collision_layer = 2
 collision_mask = 3
@@ -100,3 +108,6 @@ shape = SubResource("CapsuleShape3D_y6xdh")
 libraries = {
 &"": SubResource("AnimationLibrary_y5hcb")
 }
+
+[node name="PlayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+replication_config = SubResource("SceneReplicationConfig_player")

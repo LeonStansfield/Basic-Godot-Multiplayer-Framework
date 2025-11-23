@@ -10,60 +10,80 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @export var ball_spawn_pos: Marker3D
 @export var animation_player: AnimationPlayer
 
-@export var is_networked: bool = true
-var networked_object_id: String = ""
-var net_ready: bool = false
-
 var mouse_sensitivity: float = 0.1
 var camera_pitch: float = 0.0 
 
-func network_ready() -> void:
-	net_ready = true
-	set_current_camera()
-
-func _set_network_ready(v: bool) -> void:
-	net_ready = v
-
 func _ready() -> void:
+	# Disable physics initially to prevent "ejection" from spawn
+	set_physics_process(false)
+	
+	# Defer setup to ensure MultiplayerSpawner has set the position and name
+	call_deferred("_setup_networking")
+
+func _setup_networking() -> void:
+	# Ensure authority is set correctly based on the final name
+	set_multiplayer_authority(str(name).to_int())
+
+	# Important: The synchronizer must have the same authority as the player!
+	var synchronizer = $PlayerSynchronizer
+	synchronizer.set_multiplayer_authority(get_multiplayer_authority())
+	
 	set_current_camera()
+	
+	# Reset velocity to prevent any accumulated momentum
+	velocity = Vector3.ZERO
+	
+	# Disable collision initially to prevent spawn conflicts
+	get_node("CollisionShape3D").disabled = true
+	
+	# Wait for sync
+	await get_tree().create_timer(0.1).timeout
+	
+	if not is_inside_tree():
+		return
+		
+	# Enable collision and physics
+	get_node("CollisionShape3D").disabled = false
+	set_physics_process(true)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if (is_multiplayer_authority() and net_ready) or not is_networked:
-		if event.is_action_pressed("escape"):
-			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-			else:
-				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	if not is_multiplayer_authority():
+		return
 		
-		if event is InputEventMouseMotion:
-			_handle_mouse_look(event)
-		
-		if event.is_action_pressed("action_1"):
-			trigger_animation("animation_1")
-		if event.is_action_pressed("action_2"):
-			trigger_animation("animation_2")
-		if event.is_action_pressed("action_3"):
-			throw_ball()
+	if event.is_action_pressed("escape"):
+		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		else:
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	
+	if event is InputEventMouseMotion:
+		_handle_mouse_look(event)
+	
+	if event.is_action_pressed("action_1"):
+		trigger_animation("animation_1")
+	if event.is_action_pressed("action_2"):
+		trigger_animation("animation_2")
+	if event.is_action_pressed("action_3"):
+		throw_ball()
 
 func _physics_process(delta: float) -> void:
-	if not is_networked or (net_ready and is_multiplayer_authority()):
-		if not is_on_floor():
-			velocity.y -= gravity * delta
+	if not is_multiplayer_authority():
+		return
 
-		var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-		var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+	if not is_on_floor():
+		velocity.y -= gravity * delta
 
-		if direction:
-			velocity.x = lerp(velocity.x, direction.x * speed, acceleration * delta)
-			velocity.z = lerp(velocity.z, direction.z * speed, acceleration * delta)
-		else:
-			velocity.x = lerp(velocity.x, 0.0, deceleration * delta)
-			velocity.z = lerp(velocity.z, 0.0, deceleration * delta)
+	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
-		move_and_slide()
+	if direction:
+		velocity.x = lerp(velocity.x, direction.x * speed, clamp(acceleration * delta, 0.0, 1.0))
+		velocity.z = lerp(velocity.z, direction.z * speed, clamp(acceleration * delta, 0.0, 1.0))
+	else:
+		velocity.x = lerp(velocity.x, 0.0, clamp(deceleration * delta, 0.0, 1.0))
+		velocity.z = lerp(velocity.z, 0.0, clamp(deceleration * delta, 0.0, 1.0))
 
-		# Send transform to others
-		update_transform.rpc(global_transform)
+	move_and_slide()
 
 # Handle looking around
 func _handle_mouse_look(event: InputEventMouseMotion) -> void:
@@ -79,7 +99,7 @@ func _handle_mouse_look(event: InputEventMouseMotion) -> void:
 
 # Enable/disable camera based on authority
 func set_current_camera() -> void:
-	if (is_multiplayer_authority() and net_ready) or not is_networked:
+	if is_multiplayer_authority():
 		camera.current = true
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	else:
@@ -89,19 +109,14 @@ func throw_ball() -> void:
 	var pos: Vector3 = ball_spawn_pos.global_position
 	var rot: Vector3 = ball_spawn_pos.global_rotation_degrees
 	if multiplayer.is_server():
-		_spawn_ball(pos, rot)
+		get_tree().get_root().get_node("NetworkManager").spawn_ball(pos, rot)
 	else:
 		rpc_id(1, "request_spawn_ball", pos, rot)
 
-@rpc("authority", "reliable")
+@rpc("any_peer", "call_remote", "reliable")
 func request_spawn_ball(pos: Vector3, rot: Vector3) -> void:
 	if multiplayer.is_server():
-		_spawn_ball(pos, rot)
-
-func _spawn_ball(pos: Vector3, rot: Vector3) -> void:
-	var network_manager = get_tree().get_root().get_node("NetworkManager")
-	var object_id = str(Time.get_ticks_msec())
-	network_manager.spawn_networked_object("ball", object_id, 1, pos, rot, Vector3.ONE)
+		get_tree().get_root().get_node("NetworkManager").spawn_ball(pos, rot)
 
 # Local + networked animation triggers
 func trigger_animation(animation: String) -> void:
@@ -112,13 +127,7 @@ func play_animation(animation: String) -> void:
 	if animation_player:
 		animation_player.play(animation)
 
-@rpc("any_peer", "reliable")
+@rpc("any_peer", "call_remote", "reliable")
 func play_animation_remote(animation: String) -> void:
-	if (not is_multiplayer_authority() and net_ready) or not is_networked:
-		if animation_player:
-			animation_player.play(animation)
-
-@rpc("any_peer", "unreliable")
-func update_transform(new_transform: Transform3D) -> void:
-	if (not is_multiplayer_authority() and net_ready) or not is_networked:
-		global_transform = new_transform
+	if animation_player:
+		animation_player.play(animation)

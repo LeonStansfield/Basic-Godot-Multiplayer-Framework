@@ -4,7 +4,7 @@
 [ext_resource type="Environment" uid="uid://crcpsuceqxwoc" path="res://Assets/environment.tres" id="3_jjvhh"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_bo1nx"]
-size = Vector3(25, 1, 25)
+size = Vector3(100, 1, 100)
 
 [node name="Main" type="Node3D"]
 
@@ -62,4 +62,4 @@ shape = SubResource("BoxShape3D_bo1nx")
 
 [node name="CSGBox3D" type="CSGBox3D" parent="World/Ground"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
-size = Vector3(25, 1, 25)
+size = Vector3(100, 1, 100)
