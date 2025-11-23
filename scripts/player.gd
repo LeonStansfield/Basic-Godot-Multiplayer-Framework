@@ -60,11 +60,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		_handle_mouse_look(event)
 	
 	if event.is_action_pressed("action_1"):
-		trigger_animation("animation_1")
+		animation_player.play("animation_1")
 	if event.is_action_pressed("action_2"):
-		trigger_animation("animation_2")
-	if event.is_action_pressed("action_3"):
-		throw_ball()
+		animation_player.play("animation_2")
 
 func _physics_process(delta: float) -> void:
 	if not is_multiplayer_authority():
@@ -105,29 +103,7 @@ func set_current_camera() -> void:
 	else:
 		camera.current = false  # Remote players don't render their camera
 
-func throw_ball() -> void:
-	var pos: Vector3 = ball_spawn_pos.global_position
-	var rot: Vector3 = ball_spawn_pos.global_rotation_degrees
-	if multiplayer.is_server():
-		get_tree().get_root().get_node("NetworkManager").spawn_ball(pos, rot)
-	else:
-		rpc_id(1, "request_spawn_ball", pos, rot)
-
 @rpc("any_peer", "call_remote", "reliable")
 func request_spawn_ball(pos: Vector3, rot: Vector3) -> void:
 	if multiplayer.is_server():
 		get_tree().get_root().get_node("NetworkManager").spawn_ball(pos, rot)
-
-# Local + networked animation triggers
-func trigger_animation(animation: String) -> void:
-	play_animation(animation)
-	play_animation_remote.rpc(animation)
-
-func play_animation(animation: String) -> void:
-	if animation_player:
-		animation_player.play(animation)
-
-@rpc("any_peer", "call_remote", "reliable")
-func play_animation_remote(animation: String) -> void:
-	if animation_player:
-		animation_player.play(animation)

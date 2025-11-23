@@ -56,6 +56,9 @@ func host_game() -> Error:
 
 	# Spawn the host's player object.
 	spawn_player(1)
+	
+	# Spawn a shared world ball
+	# spawn_ball(Vector3(0, 5, 0), Vector3.ZERO)
 	return OK
 
 func join_game(ip: String) -> Error:
